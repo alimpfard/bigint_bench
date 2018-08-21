@@ -8,3 +8,6 @@
 $ make all #-> cleans, builds and runs all the tests, and generates a plot (node.js will take a long time)
 $ make quick #-> everything but node
 ```
+
+### Think my code is junk, or unfairly slow?
+ Fix it yourself
