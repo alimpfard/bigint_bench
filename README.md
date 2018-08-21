@@ -1,7 +1,7 @@
 # Silly Comparison of a silly concept in different languages
 
 + _A plot_
-[#](./plot.png)
+![#](./plot.png)
 
 ## Running it
 ```sh
