@@ -1,3 +1,12 @@
+
+
+define run_single_test
+	echo "[$$(date)] $(1) started"
+	( /usr/bin/time -f "$(1) %M" zsh -c "{time $(2) >/dev/null 2>&3} 3>&2 2>>results" ) 2>&1 | tr \' '"' | tee -a mem_results
+	echo "[$$(date)] $(1) finished"
+endef
+
+
 all: clean build_buildables check format_results sort_results generate_gnuplot
 
 quick: clean build_buildables check_fast format_results sort_results generate_gnuplot
@@ -5,6 +14,7 @@ quick: clean build_buildables check_fast format_results sort_results generate_gn
 clean:
 	rm -f hask hask.hi hask.o a.out go *.class rustx rust/target/release/rust ctr
 	mv results results.last || true
+	mv mem_results mem_results.last || true
 
 build_buildables: b_cxx b_hask b_go b_java b_scala b_rust b_scm b_ctr
 
@@ -12,16 +22,20 @@ check: c_cxx c_hask c_go c_java c_scala c_rust c_ctr_n c_ctr_c c_py c_rb c_scm c
 
 check_fast: c_cxx c_hask c_go c_java c_scala c_rust c_ctr_n c_ctr_c c_py c_rb
 
+define gnuplot
+	gnuplot -e 'set term pngcairo size 1200,800; set output "plot.png"; set boxwidth 0.2; set style fill solid; set y2tics; set y2label "Memory Usage (MB)"; set title "Runtime; calc/print of 500000!"; set xtic rotate by 45 right; set ylabel "seconds"; plot "mem_results" using ($$2/1024) axes x1y2 lc rgb "red" with histogram title "memory", "data.dat" using 3:xtic(2) with boxes title "runtime", "data.dat" using 1:($$3+10):3 with labels font "Helvetica,10" offset 0,-1 notitle'
+endef
+
 generate_gnuplot:
 	cat results | sed -e 's/( /(/g' | awk -e '{print NR-1, "\"", $$1, "\"", substr($$5, 0,length($$5)-1)}' > data.dat.u
 	./transl.sh data.dat.u > data.dat
-	gnuplot -e 'set term pngcairo size 1200,800; set output "plot.png"; set boxwidth 0.5; set style fill solid; set title "Runtime; calc/print of 500000! (Lower is better)"; set xtic rotate by 45 right; plot "data.dat" using 1:3:xtic(2) with boxes'
+	$(call gnuplot)
 
 generate_gnuplot_no_node:
-	cat results | awk -e '{print NR-1, "\"", $$1, "\"", substr($$5, 0,length($$5)-1)}' > data.dat.u
+	cat results | sed -e 's/( /(/g' | awk -e '{print NR, "\"", $$1, "\"", substr($$5, 0,length($$5)-1)}' > data.dat.u
 	sed -i -e '/node/d' data.dat.u
 	./transl.sh data.dat.u > data.dat
-	gnuplot -e 'set term pngcairo size 1200,800; set output "plot.png"; set boxwidth 0.5; set style fill solid; set title "Runtime; calc/print of 500000! (Lower is better)"; set xtic rotate by 45 right; plot "data.dat" using 1:3:xtic(2) with boxes'
+	$(call gnuplot)
 
 format_results:
 	cat results | perl -ne '/^((?:.\/)?\w+).*&3  (.*) user (.*) system (.*) cpu (.*) total/ && print((sprintf  "%-7s -> (%4s cpu) %8s user %5s system %14s total\n", $$1, $$4, $$2, $$3, $$5))' > results_formatted
@@ -53,53 +67,43 @@ b_scm:
 
 b_ctr:
 	ctrc ctr.ctr ctrx -O >/dev/null 2>&1
+	ctrc ctr.ctr ctrh -O --heap-size=512M >/dev/null 2>&1
 	ctrc ctr.ctr ctru >/dev/null 2>&1
 
 c_scm:
-	echo "Scheme check"
-	zsh -c "{time scheme --optimize-level 3 --script scheme.so >/dev/null 2>&3} 3>&2 2>>results"
+	$(call run_single_test,Scheme,scheme --optimize-level 3 --script scheme.so)
 
 c_cxx:
-	echo "C++ check"
-	zsh -c "{time ./a.out > /dev/null 2>&3} 3>&2 2>>results"
+	$(call run_single_test,C++,./a.out)
 
 c_hask:
-	echo "Haskell check"
-	zsh -c "{time ./hask > /dev/null 2>&3} 3>&2 2>>results"
-
+	$(call run_single_test,Haskell,./hask)
+	
 c_go:
-	echo "Golang check"
-	zsh -c "{time ./go > /dev/null 2>&3} 3>&2 2>>results"
+	$(call run_single_test,Go,./go)
 
 c_java:
-	echo "Java check"
-	zsh -c "{time java F4 > /dev/null 2>&3} 3>&2 2>>results"
+	$(call run_single_test,Java,java F4)
 
 c_rust:
-	echo "Rust check"
-	zsh -c "{time ./rustx > /dev/null 2>&3} 3>&2 2>>results"
+	$(call run_single_test,Rust,./rustx)
 
 c_ctr_n:
-	echo "Citron jit check"
-	zsh -c "{time ctr ./ctr.ctr > /dev/null 2>&3} 3>&2 2>>results"
+	$(call run_single_test,'Citron (JIT)',ctr ctr.ctr)
 
 c_ctr_c:
-	echo "Citron compiled (opt) check"
-	zsh -c "{time ./ctrx > /dev/null 2>&3} 3>&2 2>>results"
-	echo "Citron compiled (unopt) check"
-	zsh -c "{time ./ctru > /dev/null 2>&3} 3>&2 2>>results"
+	$(call run_single_test,'Citron (Unopt)',./ctru)
+	$(call run_single_test,'Citron (Opt)',./ctrx)
+	$(call run_single_test,'Citron (Opt,heap=512M)',./ctrh)
+
 c_py:
-	echo "Python check"
-	zsh -c "{time python python.py > /dev/null 2>&3} 3>&2 2>>results"
+	$(call run_single_test,'Python',python python.py)
 
 c_rb:
-	echo "Ruby check"
-	zsh -c "{time ruby ruby.rb > /dev/null 2>&3} 3>&2 2>>results"
+	$(call run_single_test,'Ruby',ruby ruby.rb)
 
 c_js:
-	echo "Nodejs check"
-	zsh -c "{time node js/js.js > /dev/null 2>&3} 3>&2 2>>results"
+	$(call run_single_test,'Nodejs',node js/js.js)
 
 c_scala:
-	echo "Scala check"
-	zsh -c "{time scala Main > /dev/null 2>&3} 3>&2 2>>results"
+	$(call run_single_test,'Scala',scala Main)
