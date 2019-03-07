@@ -18,9 +18,9 @@ clean:
 
 build_buildables: b_cxx b_hask b_go b_java b_scala b_rust b_scm b_ctr
 
-check: c_cxx c_hask c_go c_java c_scala c_rust c_ctr_n c_ctr_c c_py c_rb c_scm c_js
+check: c_cxx c_hask c_go c_java c_scala c_rust c_ctr_n c_ctr_c c_php c_py c_rb c_scm c_js
 
-check_fast: c_cxx c_hask c_go c_java c_scala c_rust c_ctr_n c_ctr_c c_py c_rb
+check_fast: c_cxx c_hask c_go c_java c_scala c_rust c_ctr_n c_ctr_c c_php c_py c_rb
 
 define gnuplot
 	gnuplot -e 'set term pngcairo size 1200,800; set output "plot.png"; set boxwidth 0.2; set style fill solid; set y2tics; set y2label "Memory Usage (MB)"; set title "Runtime; calc/print of 500000!"; set xtic rotate by 45 right; set ylabel "seconds"; plot "mem_results" using ($$2/1024) axes x1y2 lc rgb "red" with histogram title "memory", "data.dat" using 3:xtic(2) with boxes title "runtime", "data.dat" using 1:($$3+10):3 with labels font "Helvetica,10" offset 0,-1 notitle'
@@ -67,7 +67,6 @@ b_scm:
 
 b_ctr:
 	ctrc ctr.ctr ctrx -O >/dev/null 2>&1
-	ctrc ctr.ctr ctrh -O --heap-size=512M >/dev/null 2>&1
 	ctrc ctr.ctr ctru >/dev/null 2>&1
 
 c_scm:
@@ -94,7 +93,9 @@ c_ctr_n:
 c_ctr_c:
 	$(call run_single_test,'Citron (Unopt)',./ctru)
 	$(call run_single_test,'Citron (Opt)',./ctrx)
-	$(call run_single_test,'Citron (Opt,heap=512M)',./ctrh)
+
+c_php:
+	$(call run_single_test,'PHP',php php.php)
 
 c_py:
 	$(call run_single_test,'Python',python python.py)
