@@ -4,26 +4,29 @@ define run_single_test
 	echo "[$$(date)] $(1) started"
 	( /usr/bin/time -f "$(1) %M" zsh -c "{time $(2) >/dev/null 2>&3} 3>&2 2>>results" ) 2>&1 | tr \' '"' | tee -a mem_results
 	echo "[$$(date)] $(1) finished"
+	touch "$@"
 endef
 
 
 all: clean build_buildables check format_results sort_results generate_gnuplot
+just_results: clean build_buildables check
 
 quick: clean build_buildables check_fast format_results sort_results generate_gnuplot
 
 clean:
-	rm -f hask hask.hi hask.o a.out go *.class rustx rust/target/release/rust ctr
+	rm -f hask hask.hi hask.o a.out go *.class rustx rust/target/release/rust ctr{x,u,h,}
 	mv results results.last || true
 	mv mem_results mem_results.last || true
+	rm -f c_*
 
-build_buildables: b_cxx b_hask b_go b_java b_scala b_rust b_scm b_ctr
+build_buildables: b_cxx b_hask b_go b_java b_scala b_rust b_scm b_ctr b_py
 
 check: c_cxx c_hask c_go c_java c_scala c_rust c_ctr_n c_ctr_c c_py c_rb c_scm c_js
 
 check_fast: c_cxx c_hask c_go c_java c_scala c_rust c_ctr_n c_ctr_c c_py c_rb
 
 define gnuplot
-	gnuplot -e 'set term pngcairo size 1200,800; set output "plot.png"; set boxwidth 0.2; set style fill solid; set y2tics; set y2label "Memory Usage (MB)"; set title "Runtime; calc/print of 500000!"; set xtic rotate by 45 right; set ylabel "seconds"; plot "mem_results" using ($$2/1024) axes x1y2 lc rgb "red" with histogram title "memory", "data.dat" using 3:xtic(2) with boxes title "runtime", "data.dat" using 1:($$3+10):3 with labels font "Helvetica,10" offset 0,-1 notitle'
+	gnuplot -e 'set term pngcairo size 1200,800; set output "plot.png"; set boxwidth 0.2; set style fill solid; set y2tics; set y2label "Memory Usage (MB)"; set title "Runtime; calc/print of 500000!"; set xtic rotate by 45 right; set ylabel "seconds"; plot "data.dat" using 3:xtic(2) with boxes title "runtime", "data.dat" using 1:($$3+10):3 with labels font "Helvetica,10" offset 0,-1 notitle, "mem_results" using ($$2/1024) axes x1y2 lc rgb "red" with histogram title "memory"'
 endef
 
 generate_gnuplot:
@@ -66,9 +69,12 @@ b_scm:
 	echo '(compile-file "scheme.scm")' | scheme >/dev/null 2>&1
 
 b_ctr:
-	ctrc ctr.ctr ctrx -O >/dev/null 2>&1
-	ctrc ctr.ctr ctrh -O --heap-size=512M >/dev/null 2>&1
-	ctrc ctr.ctr ctru >/dev/null 2>&1
+	ctrc ctr.ctr ctrx -O --heap-max=128M >/dev/null 2>&1
+	ctrc ctr.ctr ctrh -O --heap-size=512M --heap-max=512M >/dev/null 2>&1
+	ctrc ctr.ctr ctru --heap-max=128M >/dev/null 2>&1
+
+b_py:
+	true
 
 c_scm:
 	$(call run_single_test,Scheme,scheme --optimize-level 3 --script scheme.so)
@@ -94,10 +100,11 @@ c_ctr_n:
 c_ctr_c:
 	$(call run_single_test,'Citron (Unopt)',./ctru)
 	$(call run_single_test,'Citron (Opt)',./ctrx)
-	$(call run_single_test,'Citron (Opt,heap=512M)',./ctrh)
+	# $(call run_single_test,'Citron (Opt,heap=512M)',./ctrh)
 
 c_py:
 	$(call run_single_test,'Python',python python.py)
+	$(call run_single_test,'Python (PyPy)', pypy3 python.py)
 
 c_rb:
 	$(call run_single_test,'Ruby',ruby ruby.rb)
