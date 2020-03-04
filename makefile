@@ -9,21 +9,23 @@ endef
 
 
 all: clean build_buildables check format_results sort_results generate_gnuplot
+nocomp: check format_results sort_results generate_gnuplot
+nocomp_quick: check_fast format_results sort_results generate_gnuplot
 just_results: clean build_buildables check
 
 quick: clean build_buildables check_fast format_results sort_results generate_gnuplot
 
 clean:
-	rm -f hask hask.hi hask.o a.out go *.class rustx rust/target/release/rust ctr{x,u,h,}
+	rm -f hask hask.hi hask.o a.out go *.class rustx rust/target/release/rust ctr{x,u,h,} *.jar
 	mv results results.last || true
 	mv mem_results mem_results.last || true
 	rm -f c_*
 
-build_buildables: b_cxx b_hask b_go b_java b_scala b_rust b_scm b_ctr b_py
+build_buildables: b_cxx b_hask b_go b_java b_scala b_rust b_scm b_ctr b_py b_kt
 
-check: c_cxx c_hask c_go c_java c_scala c_rust c_ctr_n c_ctr_c c_php c_py c_rb c_scm c_js
+check: c_cxx c_hask c_go c_java c_scala c_rust c_ctr_n c_ctr_c c_php c_py c_rb c_scm c_js c_kt
 
-check_fast: c_cxx c_hask c_go c_java c_scala c_rust c_ctr_n c_ctr_c c_php c_py c_rb
+check_fast: c_cxx c_hask c_go c_java c_scala c_rust c_ctr_n c_ctr_c c_php c_py c_rb c_kt
 
 define gnuplot
 	gnuplot -e 'set term pngcairo size 1200,800; set output "plot.png"; set boxwidth 0.2; set style fill solid; set y2tics; set y2label "Memory Usage (MB)"; set title "Runtime; calc/print of 500000!"; set xtic rotate by 45 right; set ylabel "seconds"; plot "data.dat" using 3:xtic(2) with boxes title "runtime", "data.dat" using 1:($$3+10):3 with labels font "Helvetica,10" offset 0,-1 notitle, "mem_results" using ($$2/1024) axes x1y2 lc rgb "red" with histogram title "memory"'
@@ -47,6 +49,9 @@ format_results:
 sort_results:
 	sort -g -s -k1.23 results > results_sorted
 
+b_kt:
+	kotlinc kotlin.kt -include-runtime -d kotlin.jar
+
 b_cxx:
 	g++ cpp.cxx -lgmp -lgmpxx >/dev/null 2>&1
 
@@ -69,12 +74,15 @@ b_scm:
 	echo '(compile-file "scheme.scm")' | scheme >/dev/null 2>&1
 
 b_ctr:
-	ctrc ctr.ctr ctrx -O --heap-max=128M >/dev/null 2>&1
+	ctrc ctr.ctr ctrx -O --heap-max=256M >/dev/null 2>&1
 	ctrc ctr.ctr ctrh -O --heap-size=512M --heap-max=512M >/dev/null 2>&1
-	ctrc ctr.ctr ctru --heap-max=128M >/dev/null 2>&1
+	ctrc ctr.ctr ctru --heap-max=256M >/dev/null 2>&1
 
 b_py:
 	true
+
+c_kt:
+	$(call run_single_test,Kotlin,kotlin kotlin.jar)
 
 c_scm:
 	$(call run_single_test,Scheme,scheme --optimize-level 3 --script scheme.so)
