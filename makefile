@@ -28,16 +28,16 @@ check: c_cxx c_hask c_go c_java c_scala c_rust c_ctr_n c_ctr_c c_php c_py c_rb c
 check_fast: c_cxx c_hask c_go c_java c_scala c_rust c_ctr_n c_ctr_c c_php c_py c_rb c_kt c_perl
 
 define gnuplot
-	gnuplot -e 'set term pngcairo size 1200,800; set output "plot.png"; set boxwidth 0.2; set style fill solid; set y2tics; set y2label "Memory Usage (MB)"; set title "Runtime; calc/print of 500000!"; set xtic rotate by 45 right; set ylabel "seconds"; plot "data.dat" using 3:xtic(2) with boxes title "runtime", "data.dat" using 1:($$3+10):3 with labels font "Helvetica,10" offset 0,-1 notitle, "mem_results" using ($$2/1024) axes x1y2 lc rgb "red" with histogram title "memory"'
+	gnuplot -e 'set term pngcairo size 1200,800; set output "plot.png"; set boxwidth 0.2; set style fill solid; set y2tics; set y2label "Memory Usage (MB)"; set title "Runtime; calc/print of 500000!"; set xtic rotate by 45 right; set ylabel "seconds"; plot "data.dat" using 3:xtic(2) with boxes title "runtime", "data.dat" using 1:($$3+10):3 with labels font "Helvetica,10" offset 0,-1 notitle, "mem_results_sorted" using ($$2/1024) axes x1y2 lc rgb "red" with histogram title "memory"'
 endef
 
 generate_gnuplot:
-	cat results | sed -e 's/( /(/g' | awk -e '{print NR-1, "\"", $$1, "\"", substr($$5, 0,length($$5)-1)}' > data.dat.u
+	cat results_sorted | sed -e 's/( /(/g' | awk -e '{print NR-1, "\"", $$1, "\"", substr($$5, 0,length($$5)-1)}' > data.dat.u
 	./transl.sh data.dat.u > data.dat
 	$(call gnuplot)
 
 generate_gnuplot_no_node:
-	cat results | sed -e 's/( /(/g' | awk -e '{print NR, "\"", $$1, "\"", substr($$5, 0,length($$5)-1)}' > data.dat.u
+	cat results_sorted | sed -e 's/( /(/g' | awk -e '{print NR, "\"", $$1, "\"", substr($$5, 0,length($$5)-1)}' > data.dat.u
 	sed -i -e '/node/d' data.dat.u
 	./transl.sh data.dat.u > data.dat
 	$(call gnuplot)
@@ -47,7 +47,11 @@ format_results:
 	mv results_formatted results
 
 sort_results:
+	cat -n results > results.num
 	sort -g -s -k1.23 results > results_sorted
+	sort -g -s -k2.23 results.num | cut -f1 > results_sorted.num
+	for line in $$(cat results_sorted.num); do awk "{ if ($$line == NR) print }" mem_results >> mem_results_sorted; done
+
 
 b_kt:
 	kotlinc kotlin.kt -include-runtime -d kotlin.jar
