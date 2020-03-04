@@ -23,9 +23,9 @@ clean:
 
 build_buildables: b_cxx b_hask b_go b_java b_scala b_rust b_scm b_ctr b_py b_kt
 
-check: c_cxx c_hask c_go c_java c_scala c_rust c_ctr_n c_ctr_c c_php c_py c_rb c_scm c_js c_kt
+check: c_cxx c_hask c_go c_java c_scala c_rust c_ctr_n c_ctr_c c_php c_py c_rb c_scm c_js c_kt c_perl
 
-check_fast: c_cxx c_hask c_go c_java c_scala c_rust c_ctr_n c_ctr_c c_php c_py c_rb c_kt
+check_fast: c_cxx c_hask c_go c_java c_scala c_rust c_ctr_n c_ctr_c c_php c_py c_rb c_kt c_perl
 
 define gnuplot
 	gnuplot -e 'set term pngcairo size 1200,800; set output "plot.png"; set boxwidth 0.2; set style fill solid; set y2tics; set y2label "Memory Usage (MB)"; set title "Runtime; calc/print of 500000!"; set xtic rotate by 45 right; set ylabel "seconds"; plot "data.dat" using 3:xtic(2) with boxes title "runtime", "data.dat" using 1:($$3+10):3 with labels font "Helvetica,10" offset 0,-1 notitle, "mem_results" using ($$2/1024) axes x1y2 lc rgb "red" with histogram title "memory"'
@@ -80,6 +80,9 @@ b_ctr:
 
 b_py:
 	true
+
+c_perl:
+	$(call run_single_test,Perl,perl perl.pl)
 
 c_kt:
 	$(call run_single_test,Kotlin,kotlin kotlin.jar)
