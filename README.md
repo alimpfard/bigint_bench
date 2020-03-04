@@ -14,4 +14,4 @@ $ make quick #-> everything but node
 ```
 
 ### Think my code is junk, or unfairly slow?
- Fix it yourself
+ Fix it yourself (and throw me a PR)
