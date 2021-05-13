@@ -1,0 +1,1 @@
+(compile-file "scheme.scm" "build/scheme.so")

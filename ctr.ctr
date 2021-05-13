@@ -1,3 +1,0 @@
-Pen writeln: (
-    (2..500000) foldl: (\:acc:&x acc *=: x) accumulator: (BigInteger new: 1)
-).
