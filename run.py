@@ -18,7 +18,7 @@ all_tests = {
             "Go": [["go", "build", "-o", "build/go", "go.go"]],
             "Java": [["javac", "-d", "build", "java.java"]],
             "Scala": [["scalac", "-d", "build", "-opt:_", "scala.sc"]],
-            "Rust": [["cargo", "build", "--release", "--manifest-path", "rust/Cargo.toml", "-Z", "unstable-options", "--out-dir", "build"]],
+            "Rust": [["cargo", "+nightly", "build", "--release", "--manifest-path", "rust/Cargo.toml", "-Z", "unstable-options", "--out-dir", "build"]],
             "Scheme": [["scheme", "--script", "scm.compile"]],
             "Kotlin": [["kotlinc", "kotlin.kt", "-include-runtime", "-d", "build/kotlin.jar"]],
         },

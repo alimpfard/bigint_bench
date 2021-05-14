@@ -4,4 +4,4 @@ version = "0.1.0"
 authors = ["AnotherTest <devanothertest@gmail.com>"]
 
 [dependencies]
-ramp = "0.5.4"
+ramp = "0.5.9"
