@@ -3,9 +3,12 @@ from subprocess import call, Popen, DEVNULL
 import os
 from time import sleep, time
 import psutil
+from multiprocessing import Pool
+from functools import reduce
 
 SKIP=1
 RUN=2
+POOL_COUNT=1
 
 all_tests = {
     "multiply": {
@@ -140,26 +143,33 @@ def compile_suite(suite, name):
 
     return failed
 
+def run_one(x):
+    lang, spec = x
+    if not do_lang(lang):
+        return {}
+    print("-- Execute/Start", lang)
+    p = Process(spec)
+    p.run_and_wait()
+    print("-- Execute/End", lang)
+    return {
+        lang: {
+            "time": p.end - p.start,
+            "memory": p.max_rss,
+        }
+    }
+
 def run_suite(suite, name):
     if "execute" not in suite:
         return {}
 
-    results = {}
     print("-- Executing suite", name)
 
     os.chdir(f'{name}/build')
 
-    for lang, spec in suite["execute"].items():
-        if not do_lang(lang):
-            continue
-        print("-- Execute/Start", lang)
-        p = Process(spec)
-        p.run_and_wait()
-        results[lang] = {
-            "time": p.end - p.start,
-            "memory": p.max_rss,
-        }
-        print("-- Execute/End", lang)
+    results = {}
+    with Pool(POOL_COUNT) as p:
+        results = reduce(lambda acc,x: [acc.update(x), acc][1],
+                         p.map(run_one, suite["execute"].items()))
 
     os.chdir('../..')
     return results
@@ -228,5 +238,10 @@ if __name__ == '__main__':
         for name, value in os.environ.items():
             if name.lower().startswith("bench_"):
                 env_specifics[name.lower()[len("bench_"):]] = value.lower() in ("true", "yes", "1")
+
+    try:
+        POOL_COUNT = int(os.environ.get("BENCH_JOBS", "1"))
+    except:
+        POOL_COUNT = None
 
     run_all_tests()
